@@ -1,0 +1,29 @@
+name: Prepare pending Instagram posts
+
+on:
+  push:
+    branches: [main]
+    paths: ["pending/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: instagram-post
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install pillow
+      - run: python3 scripts/prepare.py
+      - name: Save prepared images
+        run: |
+          git config user.name "ig-poster"
+          git config user.email "ig-poster@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Prepare pending post images [skip ci]"
+          git push
