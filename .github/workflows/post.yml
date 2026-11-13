@@ -1,10 +1,17 @@
 name: Post to Instagram
 
 on:
-  push:
-    branches: [main]
-    paths: ["queue/**"]
+  schedule:
+    # 2:45 pm Alaska in both standard (UTC-9) and daylight (UTC-8) time;
+    # the script only posts inside the 3 pm window, once per day.
+    - cron: "45 22 * * *"
+    - cron: "45 23 * * *"
   workflow_dispatch:
+    inputs:
+      post_now:
+        description: "Post the oldest queued item right now"
+        type: boolean
+        default: false
 
 concurrency:
   group: instagram-post
@@ -19,13 +26,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Publish queued posts
+      - name: Publish queued post
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          POST_NOW: ${{ inputs.post_now }}
         run: python3 scripts/post.py
 
-      - name: Move published posts out of the queue
+      - name: Move published post out of the queue
         if: always()
         run: |
           git config user.name "ig-poster"

@@ -14,7 +14,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
+
+TZ = ZoneInfo("America/Anchorage")
+POST_HOUR = 15          # 3 pm Alaska
+WINDOW_START_MIN = -15  # allow a run from 2:45 pm
+WINDOW_END_MIN = 120    # ...until 5 pm, to absorb GitHub cron delays
 
 API_VERSION = "v25.0"
 HOSTS = ["https://graph.instagram.com", "https://graph.facebook.com"]
@@ -103,12 +110,33 @@ def publish(host, post_dir):
     return media_id, link
 
 
+def posted_today():
+    today = datetime.now(TZ).date()
+    for r in POSTED.glob("*/result.json"):
+        at = json.loads(r.read_text()).get("posted_at", "")
+        if at and datetime.strptime(at, "%Y-%m-%dT%H:%M:%SZ").replace(
+                tzinfo=ZoneInfo("UTC")).astimezone(TZ).date() == today:
+            return True
+    return False
+
+
+def in_window():
+    now = datetime.now(TZ)
+    mins = (now.hour - POST_HOUR) * 60 + now.minute
+    return WINDOW_START_MIN <= mins <= WINDOW_END_MIN
+
+
 def main():
+    force = os.environ.get("POST_NOW") == "true"
+    if not force and (not in_window() or posted_today()):
+        print("Not posting now (outside 3 pm Alaska window or already posted today).")
+        return
     posts = sorted(p for p in QUEUE.iterdir() if p.is_dir() and (p / "post.json").exists()) \
         if QUEUE.exists() else []
     if not posts:
         print("Queue empty.")
         return
+    posts = posts[:1]  # one post per day, oldest first
     host = pick_host()
     failures = 0
     for post_dir in posts:
