@@ -1,4 +1,4 @@
-name: Post to Instagram
+name: Post to Instagram + Facebook
 
 on:
   schedule:
@@ -30,6 +30,8 @@ jobs:
         env:
           IG_TOKEN: ${{ secrets.IG_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           POST_NOW: ${{ inputs.post_now }}
         run: python3 scripts/post.py
 

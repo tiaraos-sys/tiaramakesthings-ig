@@ -5,6 +5,9 @@ Each post is a folder: queue/<post-id>/
   1.jpg ...  -> the images (JPEG). 1 image = single post, 2-10 = carousel.
 
 Secrets: IG_TOKEN, IG_USER_ID. Env: GITHUB_REPOSITORY, GITHUB_SHA.
+Optional secrets: FB_PAGE_TOKEN, FB_PAGE_ID -> the same post also goes to the
+Facebook Page. If they're missing, Facebook is skipped. A Facebook error never
+undoes or fails the Instagram post; it's recorded in result.json.
 """
 import json
 import os
@@ -29,6 +32,9 @@ TOKEN = os.environ["IG_TOKEN"].strip()
 USER_ID = os.environ["IG_USER_ID"].strip()
 REPO = os.environ["GITHUB_REPOSITORY"]
 SHA = os.environ["GITHUB_SHA"]
+FB_TOKEN = os.environ.get("FB_PAGE_TOKEN", "").strip()
+FB_PAGE_ID = os.environ.get("FB_PAGE_ID", "").strip()
+FB_HOST = "https://graph.facebook.com"
 ROOT = Path(__file__).resolve().parent.parent
 QUEUE, POSTED, FAILED = ROOT / "queue", ROOT / "posted", ROOT / "failed"
 
@@ -37,9 +43,9 @@ class ApiError(Exception):
     pass
 
 
-def call(host, method, path, params=None):
+def call(host, method, path, params=None, token=None):
     params = dict(params or {})
-    params["access_token"] = TOKEN
+    params["access_token"] = token or TOKEN
     url = f"{host}/{API_VERSION}/{path}"
     data = None
     if method == "GET":
@@ -77,7 +83,7 @@ def wait_ready(host, container_id):
     raise ApiError(f"container {container_id} not ready after 150s")
 
 
-def publish(host, post_dir):
+def load_post(post_dir):
     meta = json.loads((post_dir / "post.json").read_text(encoding="utf-8"))
     caption = meta.get("caption", "")
     images = meta.get("images") or sorted(
@@ -90,6 +96,31 @@ def publish(host, post_dir):
         f"https://raw.githubusercontent.com/{REPO}/{SHA}/{rel}/{urllib.parse.quote(name)}"
         for name in images
     ]
+    return caption, urls
+
+
+def publish_facebook(caption, urls):
+    """Post the same caption + photos to the Facebook Page. Returns the post link."""
+    def fb(method, path, params):
+        return call(FB_HOST, method, path, params, token=FB_TOKEN)
+
+    if len(urls) == 1:
+        r = fb("POST", f"{FB_PAGE_ID}/photos", {"url": urls[0], "message": caption})
+        post_id = r.get("post_id") or r["id"]
+    else:
+        params = {"message": caption}
+        for i, u in enumerate(urls):
+            pid = fb("POST", f"{FB_PAGE_ID}/photos", {"url": u, "published": "false"})["id"]
+            params[f"attached_media[{i}]"] = json.dumps({"media_fbid": pid})
+        post_id = fb("POST", f"{FB_PAGE_ID}/feed", params)["id"]
+    try:
+        return post_id, fb("GET", post_id, {"fields": "permalink_url"}).get("permalink_url", "")
+    except ApiError:
+        return post_id, ""
+
+
+def publish(host, post_dir):
+    caption, urls = load_post(post_dir)
 
     if len(urls) == 1:
         container = call(host, "POST", f"{USER_ID}/media",
@@ -142,11 +173,21 @@ def main():
     for post_dir in posts:
         try:
             media_id, link = publish(host, post_dir)
-            (post_dir / "result.json").write_text(json.dumps(
-                {"status": "posted", "media_id": media_id, "permalink": link,
-                 "posted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}, indent=2))
-            dest = POSTED
+            result = {"status": "posted", "media_id": media_id, "permalink": link,
+                      "posted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
             print(f"POSTED {post_dir.name}: {link}")
+            if FB_TOKEN and FB_PAGE_ID:
+                try:
+                    fb_id, fb_link = publish_facebook(*load_post(post_dir))
+                    result["facebook"] = {"status": "posted", "post_id": fb_id, "permalink": fb_link}
+                    print(f"FACEBOOK {post_dir.name}: {fb_link or fb_id}")
+                except (ApiError, KeyError) as e:
+                    result["facebook"] = {"status": "failed", "error": str(e)}
+                    print(f"FACEBOOK FAILED {post_dir.name}: {e}")
+            else:
+                result["facebook"] = {"status": "skipped", "reason": "FB_PAGE_TOKEN/FB_PAGE_ID not set"}
+            (post_dir / "result.json").write_text(json.dumps(result, indent=2))
+            dest = POSTED
         except ApiError as e:
             (post_dir / "result.json").write_text(json.dumps(
                 {"status": "failed", "error": str(e)}, indent=2))
