@@ -5,5 +5,11 @@
     "https://export-download.canva.com/7iuJs/DAHb7V7iuJs/-1/0/0002-4165227146407284809.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH4R7NKVBA%2F20261126%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261126T044242Z&X-Amz-Expires=38253&X-Amz-Signature=381ea0af1f823821d37361da553881aa1e4a21efdececd241b7c41ab0ad65af3&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Thu%2C%2026%20Nov%202026%2015%3A20%3A15%20GMT",
     "https://export-download.canva.com/7iuJs/DAHb7V7iuJs/-1/0/0003-4165227146407284809.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH4R7NKVBA%2F20261126%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261126T124624Z&X-Amz-Expires=9972&X-Amz-Signature=d0ce2338c297f1ac0d99e5f2390f1ce778cfc9018b49d8c6c5785aace9c8e0bb&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Thu%2C%2026%20Nov%202026%2015%3A32%3A36%20GMT",
     "https://export-download.canva.com/7iuJs/DAHb7V7iuJs/-1/0/0004-4165227146407284809.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUH4R7NKVBA%2F20261125%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20261125T144336Z&X-Amz-Expires=89114&X-Amz-Signature=b03de0d763cdc4e52a778d87999015fa671c5d31ba584e6d58a016654f0c0871&X-Amz-SignedHeaders=host%3Bx-amz-expected-bucket-owner&response-expires=Thu%2C%2026%20Nov%202026%2015%3A28%3A50%20GMT"
+  ],
+  "images": [
+    "1.jpg",
+    "2.jpg",
+    "3.jpg",
+    "4.jpg"
   ]
 }
